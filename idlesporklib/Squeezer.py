@@ -16,6 +16,10 @@ except ImportError:
     import tkinter as Tkinter
     from tkinter import font as tkFont
 import os
+from subprocess import Popen
+import time
+import threading
+
 
 
 # define IDLE-infrastructure specific functions
@@ -74,6 +78,11 @@ def _countlines(s, linewidth=_LINEWIDTH, tabwidth=_TABWIDTH):
     if numchars > 0: # must special-case, otherwise divmod(-1, linewidth)
         linecount += (current_column + numchars - 1) // linewidth
     return linecount
+
+def delete_temp_file(proc, fn):
+    while proc.poll() is None:
+        time.sleep(5)
+    os.remove(fn)
 
 
 def tags_in_range(text, start, end):
@@ -188,7 +197,9 @@ class ExpandingButton(Tkinter.Button):
         f = open(fn, "w")
         f.write(Links.replace_links(self.copypreview_txt()))
         f.close()
-        os.system(self.squeezer._PREVIEW_COMMAND % {"fn":fn})
+        proc = Popen(self.squeezer._PREVIEW_COMMAND % {"fn":fn}, shell = True)
+        thrd = threading.Thread(target = delete_temp_file, args = (proc, fn))
+        thrd.start()
             
     def expand_back(self, s):
         self.s = s + self.s
